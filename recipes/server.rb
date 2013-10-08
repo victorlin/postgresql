@@ -84,8 +84,20 @@ end
 bash "assign-postgres-password" do
   user 'postgres'
   code <<-EOH
+
+# update the password
 echo 'ALTER ROLE postgres ENCRYPTED PASSWORD '"'"'#{node['postgresql']['password']['postgres']}'"'"';' | psql
+
+# make sure wrong password should not pass
+PGPASSWORD='WRONG_PWD' psql -h 127.0.0.1 -U postgres -c "select 1"; STATUS_CODE=$?
+if [ $STATUS_CODE == 0 ]; then
+  echo 'Wrong password should failed'
+  exit -1
+fi
+
+# make sure the correct password will pass
 PGPASSWORD='#{node['postgresql']['password']['postgres']}' psql -h 127.0.0.1 -U postgres -c "select 1"
+
   EOH
   action :run
 end
